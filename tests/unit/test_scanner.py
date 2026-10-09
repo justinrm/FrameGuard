@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from frameguard.models import ProcessResult, ScanConfig, Toolchain, ToolVersions
+import pytest
+
+from frameguard.models import DependencyError, ProcessResult, ScanConfig, Toolchain, ToolVersions
 from frameguard.scanner import scan
 
 
@@ -43,6 +45,55 @@ def test_video_only_probe_can_pass(tmp_path: Path) -> None:
         "no_audio"
     )
     assert any(finding.code == "AUDIO_ABSENT" for finding in report.findings)
+
+
+def test_missing_tools_are_incomplete(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    media = tmp_path / "sample.mp4"
+    media.write_bytes(b"read-only-test-input")
+
+    def missing() -> Toolchain:
+        raise DependencyError("ffmpeg is required")
+
+    monkeypatch.setattr("frameguard.scanner.discover_tools", missing)
+    report = scan(media, ScanConfig())
+
+    assert report.overall_status == "incomplete"
+    dependencies = next(check for check in report.checks if check.check_id == "dependencies")
+    assert dependencies.reason_code == "dependency_error"
+
+
+def test_changed_input_stays_incomplete(tmp_path: Path) -> None:
+    media = tmp_path / "sample.mp4"
+    media.write_bytes(b"read-only-test-input")
+    payload = {
+        "format": {"format_name": "mov,mp4", "start_time": "0", "duration": "1"},
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 320,
+                "height": 240,
+                "avg_frame_rate": "30/1",
+                "disposition": {"default": 1, "attached_pic": 0},
+            }
+        ],
+    }
+
+    def runner(_spec: object) -> ProcessResult:
+        media.write_bytes(media.read_bytes() + b"x")
+        return ProcessResult(0, json.dumps(payload).encode(), b"")
+
+    report = scan(
+        media,
+        ScanConfig(),
+        runner=runner,
+        tools=Toolchain(Path("ffmpeg"), Path("ffprobe"), ToolVersions()),
+    )
+
+    assert report.overall_status == "incomplete"
+    assert any(diagnostic.code == "input_changed" for diagnostic in report.diagnostics)
+    assert next(check for check in report.checks if check.check_id == "probe").status == "completed"
 
 
 def test_missing_input_is_controlled_incomplete(tmp_path: Path) -> None:
