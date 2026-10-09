@@ -1,6 +1,6 @@
 # FrameGuard v0.1 planning drafts
 
-Status: **DRAFT — owner review required; no implementation authorized.** Prepared 2026-10-08 from the supplied MVP handoff and current upstream research. These documents are recommendations, not an approved specification or verification of a working product.
+Status: planning record from 2026-10-08. The owner approved the direction and Milestone 0 passed. A local scan through metadata, black, silence, and JSON/HTML now exists. These documents are the planning record, not a claim that the product is unbuilt or that broader platform support was proven.
 
 The intended outcome is a small Python-first, local/offline, single-video CLI that reports technical evidence without making creative judgments. The source media is read-only. JSON is authoritative; terminal and standalone HTML render the same normalized report. Cloud services, AI frameworks, editing, batch processing, and frame-pacing analysis remain excluded.
 
@@ -12,13 +12,13 @@ The original supplied specification remains the baseline. Where these drafts pro
 
 ## Evidence boundary
 
-The selected folder was empty and had no project-local Git repository when inspected. Read-only environment checks found Linux workspace Python 3.10.12, FFmpeg/FFprobe 4.4.2, and uv 0.12.13. This is not the user's macOS environment and does not establish compatibility with the proposed runtime. No product code, scaffold, Git initialization, dependencies, media fixtures, or release artifacts were created. No media-analysis experiment or product test was run in this planning session.
+The selected folder was empty and had no project-local Git repository when these drafts were written. Read-only environment checks found Linux workspace Python 3.10.12, FFmpeg/FFprobe 4.4.2, and uv 0.12.13. This is not the user's macOS environment and does not establish compatibility with the proposed runtime. No product code existed in that planning session. The later local scan and its macOS FFmpeg 9.0.2 evidence live in the repository and in `docs/validation/`.
 
 Documented FFmpeg capabilities and current upstream source were researched. EOF/timestamp behavior still needs experiments on pinned release binaries. Moving upstream `master`/`main` links are reference evidence, not a reproducibility pin; Milestone 0 must record release/build identifiers and source revisions where relevant.
 
 ## Approval and next action
 
-Review the proposed contracts and approve or amend A1–A4. Then authorize **Milestone 0 only**, or explicitly authorize Milestone 0 followed by Milestone 1 if all its gates pass. The handoff includes stop conditions. License selection can remain pending during private engineering work but blocks public distribution.
+A1, A2, and the narrowed A3 (exact FFmpeg/FFprobe 9.0.2 on this Mac) were accepted, and Milestone 0 passed. The local scan through M3 is already in the tree. Do not rebuild it from these drafts. Public release, a 6.1 floor, and Linux media evidence are still not claimed.
 
 ## Planning verification
 

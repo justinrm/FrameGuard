@@ -12,7 +12,7 @@ Verdict: **M0 pass — go for M1 only after explicit owner authorization**
 | M0.3 detector/timestamp/failure contract | Complete | decoded oracles, native EOF edges, explicit edit lists, signed/nonzero starts, `-xerror`, cancellation and parser states validated |
 | M0.4 offline/operational safety gate | Complete | file-only/forced-MOV/reference rejection, caps, timeout/flood/cancellation cleanup and unchanged hashes validated |
 
-M1 was not started and remains unauthorized.
+M1–M3 were implemented later as the local scan on this Mac. This file remains the M0 gate record only.
 
 ## Passed observations
 
@@ -52,10 +52,10 @@ The gate passes with these residual limitations:
 
 ## Decision
 
-M0 passes under the amended exact-build contract. The technical recommendation
-is **go for M1**, but only after the owner reviews this evidence and explicitly
-authorizes M1. No application, packaging, production detector, renderer, CI,
-Git repository or release work was created.
+M0 passes under the amended exact-build contract. The local tree later added
+the installable scan, metadata checks, black and silence detection, and
+JSON/HTML reports. Support remains exact FFmpeg/FFprobe 9.0.2 on this macOS
+arm64 host. No 6.1 floor, Linux media run, or release tag is claimed here.
 
 ## Evidence links
 

@@ -13,18 +13,9 @@ explicitly amended A3: validate only the installed FFmpeg/FFprobe 9.0.2 build,
 make no 6.1+ or cross-build claim, and continue only if experiments reveal no
 downstream blocker. M1 requires separate authorization.
 
-No project-local `CLAUDE.md` or `AGENTS.md` was present. The folder is not a
-Git repository:
-
-```text
-$ pwd
-/Users/justin/Desktop/Projects/frameguard
-$ git status --short --branch
-fatal: not a git repository (or any of the parent directories): .git
-```
-
-No Git repository was initialized and no host runtime was installed or
-changed.
+No project-local `CLAUDE.md` or `AGENTS.md` was present. At M0.1 this folder
+was not a Git repository and no host runtime was installed or changed. It is
+now a local Git checkout; that later fact is not part of the M0.1 evidence.
 
 ## Host
 
