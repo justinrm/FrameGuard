@@ -56,6 +56,19 @@ def test_integer_fps_mismatches_rational_baseline(media_fixtures: dict[str, Path
     assert _finding(report, "FPS_MISMATCH").severity == "critical"
 
 
+def test_multi_track_selects_default_real_streams(media_fixtures: dict[str, Path]) -> None:
+    report = scan(media_fixtures["multi_cover"], ScanConfig())
+    metadata = report.media_metadata
+
+    assert metadata is not None
+    assert metadata.selected_video_index == 1
+    assert metadata.selected_audio_index == 3
+    assert metadata.uninspected_stream_indexes == [0, 2, 4]
+    cover = next(stream for stream in metadata.streams if stream.index == 4)
+    assert cover.attached_pic
+    assert _check(report, "probe").status == "completed"
+
+
 def test_rotated_copy_still_mismatches_portrait_coded_size(
     media_fixtures: dict[str, Path],
 ) -> None:

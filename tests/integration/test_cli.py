@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 
-def run_frameguard(*args: str) -> subprocess.CompletedProcess[str]:
+def run_frameguard(
+    *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     executable = Path(sys.executable).parent / "frameguard"
     return subprocess.run(
-        [executable, *args],
+        [str(executable), *args],
         stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
 
 
@@ -80,3 +84,23 @@ def test_installed_cli_writes_both_reports_and_expectation_exits(
     blocked = run_frameguard("scan", str(media_fixtures["baseline"]), "--json", str(kept))
     assert blocked.returncode == 2
     assert kept.read_text() == "keep"
+
+
+def test_installed_cli_writes_a_spaced_unicode_report(
+    tmp_path: Path, media_fixtures: dict[str, Path]
+) -> None:
+    json_path = tmp_path / "out ü report.json"
+    result = run_frameguard("scan", str(media_fixtures["baseline"]), "--json", str(json_path))
+
+    assert result.returncode == 0
+    assert json.loads(json_path.read_text())["overall_status"] == "pass"
+
+
+def test_installed_cli_reports_missing_ffmpeg(media_fixtures: dict[str, Path]) -> None:
+    env = os.environ.copy()
+    env["PATH"] = "/usr/bin:/bin"
+    result = run_frameguard("scan", str(media_fixtures["baseline"]), env=env)
+
+    assert result.returncode == 2
+    assert "ffmpeg was not found on PATH" in result.stdout
+    assert "Traceback" not in result.stderr

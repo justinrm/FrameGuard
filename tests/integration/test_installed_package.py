@@ -62,3 +62,48 @@ def test_clean_wheel_scans_outside_checkout(
     assert scan.returncode == 0
     assert "Status: pass" in scan.stdout
     assert "Traceback" not in scan.stderr
+
+
+def test_clean_sdist_scans_outside_checkout(
+    tmp_path: Path, media_fixtures: dict[str, Path]
+) -> None:
+    dist = tmp_path / "dist"
+    built = _run(
+        [sys.executable, "-m", "build", "--sdist", "--outdir", str(dist)],
+        cwd=ROOT,
+    )
+    assert built.returncode == 0, built.stderr
+    sources = list(dist.glob("frameguard-*.tar.gz"))
+    assert len(sources) == 1
+
+    wheels = tmp_path / "wheels"
+    wheeled = _run(
+        [sys.executable, "-m", "build", "--wheel", "--outdir", str(wheels), str(sources[0])],
+        cwd=tmp_path,
+    )
+    assert wheeled.returncode == 0, wheeled.stderr
+    built_wheels = list(wheels.glob("frameguard-*.whl"))
+    assert len(built_wheels) == 1
+
+    venv = tmp_path / "venv"
+    created = _run([sys.executable, "-m", "venv", str(venv)], cwd=tmp_path)
+    assert created.returncode == 0, created.stderr
+    installed = _run(
+        [str(venv / "bin" / "pip"), "install", "--no-index", str(built_wheels[0])],
+        cwd=tmp_path,
+    )
+    assert installed.returncode == 0, installed.stderr
+
+    work = tmp_path / "work"
+    work.mkdir()
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    frameguard = str(venv / "bin" / "frameguard")
+    version = _run([frameguard, "--version"], cwd=work, env=env)
+    scan = _run([frameguard, "scan", str(media_fixtures["baseline"])], cwd=work, env=env)
+
+    assert version.returncode == 0
+    assert version.stdout.strip() == "frameguard 0.1.0"
+    assert scan.returncode == 0
+    assert "Status: pass" in scan.stdout
+    assert "Traceback" not in scan.stderr

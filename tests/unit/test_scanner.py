@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
-from frameguard.models import DependencyError, ProcessResult, ScanConfig, Toolchain, ToolVersions
+from frameguard.models import (
+    DependencyError,
+    ProcessResult,
+    ScanConfig,
+    Toolchain,
+    ToolVersions,
+    exit_code,
+)
 from frameguard.scanner import scan
 
 
@@ -94,6 +102,22 @@ def test_changed_input_stays_incomplete(tmp_path: Path) -> None:
     assert report.overall_status == "incomplete"
     assert any(diagnostic.code == "input_changed" for diagnostic in report.diagnostics)
     assert next(check for check in report.checks if check.check_id == "probe").status == "completed"
+
+
+def test_directory_and_fifo_are_not_regular_files(tmp_path: Path) -> None:
+    folder = tmp_path / "clip.mp4"
+    folder.mkdir()
+    directory = scan(folder, ScanConfig())
+    assert directory.overall_status == "incomplete"
+    assert directory.checks[0].reason_code == "input_not_regular"
+    assert exit_code(directory) == 2
+
+    pipe = tmp_path / "pipe.mp4"
+    os.mkfifo(pipe)
+    fifo = scan(pipe, ScanConfig())
+    assert fifo.overall_status == "incomplete"
+    assert fifo.checks[0].reason_code == "input_not_regular"
+    assert exit_code(fifo) == 2
 
 
 def test_missing_input_is_controlled_incomplete(tmp_path: Path) -> None:
