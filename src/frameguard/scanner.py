@@ -6,10 +6,14 @@ from fractions import Fraction
 from pathlib import Path
 
 from . import __version__
+from .checks.black import detect_black
+from .checks.metadata import check_audio_presence, check_frame_rate, check_resolution
+from .checks.silence import detect_silence
 from .models import (
     CheckResult,
     DependencyError,
     Diagnostic,
+    Finding,
     InputInfo,
     ScanConfig,
     ScanReport,
@@ -198,65 +202,17 @@ def scan(
 
     checks.append(CheckResult("probe", "completed"))
     metadata = probe.metadata
-    checks.append(
-        CheckResult(
-            "resolution",
-            "failed"
-            if config.expect_width is not None or config.expect_height is not None
-            else "skipped",
-            reason_code=(
-                "feature_not_implemented"
-                if config.expect_width is not None or config.expect_height is not None
-                else "not_configured"
-            ),
-            required=config.expect_width is not None or config.expect_height is not None,
-        )
-    )
-    checks.append(
-        CheckResult(
-            "frame_rate",
-            "failed" if config.expect_fps is not None else "skipped",
-            reason_code="feature_not_implemented"
-            if config.expect_fps is not None
-            else "not_configured",
-            required=config.expect_fps is not None,
-        )
-    )
-    checks.append(
-        CheckResult(
-            "audio_presence",
-            "failed" if config.require_audio else "skipped",
-            reason_code="feature_not_implemented" if config.require_audio else "not_configured",
-            required=config.require_audio,
-        )
-    )
-    checks.append(
-        CheckResult(
-            "black",
-            "failed",
-            reason_code="feature_not_implemented",
-            reason="black detection is delivered in Milestone 2",
-            selected_stream_index=metadata.selected_video_index,
-        )
-    )
-    checks.append(
-        CheckResult(
-            "silence",
-            "failed" if metadata.selected_audio_index is not None else "skipped",
-            reason_code=(
-                "feature_not_implemented"
-                if metadata.selected_audio_index is not None
-                else "no_audio"
-            ),
-            reason=(
-                "silence detection is delivered in Milestone 2"
-                if metadata.selected_audio_index is not None
-                else "selected media has no audio stream"
-            ),
-            required=metadata.selected_audio_index is not None,
-            selected_stream_index=metadata.selected_audio_index,
-        )
-    )
+    timeline = choose_timeline(metadata)
+    findings: list[Finding] = []
+    for check, produced in (
+        check_resolution(metadata, config),
+        check_frame_rate(metadata, config),
+        check_audio_presence(metadata, config),
+        detect_black(resolved, metadata, config, timeline, tools, runner),
+        detect_silence(resolved, metadata, config, timeline, tools, runner),
+    ):
+        checks.append(check)
+        findings.extend(produced)
 
     diagnostics: list[Diagnostic] = []
     final = resolved.stat()
@@ -284,16 +240,16 @@ def scan(
         )
         diagnostics.append(diagnostic)
 
-    status = calculate_status(checks, [])
+    status = calculate_status(checks, findings)
     return ScanReport(
         schema_version="0.1.0",
         tool_version=__version__,
         input=InputInfo(path.name, initial.st_size),
         media_metadata=metadata,
         configuration=_config_projection(config),
-        timeline=choose_timeline(metadata),
+        timeline=timeline,
         checks=checks,
-        findings=[],
+        findings=findings,
         diagnostics=diagnostics,
         overall_status=status,
         analysis_duration_seconds=time.monotonic() - started,

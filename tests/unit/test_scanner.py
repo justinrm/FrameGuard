@@ -7,7 +7,7 @@ from frameguard.models import ProcessResult, ScanConfig, Toolchain, ToolVersions
 from frameguard.scanner import scan
 
 
-def test_metadata_scan_is_useful_but_explicitly_incomplete(tmp_path: Path) -> None:
+def test_video_only_probe_can_pass(tmp_path: Path) -> None:
     media = tmp_path / "sample.mp4"
     media.write_bytes(b"read-only-test-input")
     payload = {
@@ -37,13 +37,12 @@ def test_metadata_scan_is_useful_but_explicitly_incomplete(tmp_path: Path) -> No
 
     assert report.media_metadata is not None
     assert report.media_metadata.selected_video_index == 0
-    assert report.overall_status == "incomplete"
-    assert next(check for check in report.checks if check.check_id == "black").reason_code == (
-        "feature_not_implemented"
-    )
+    assert report.overall_status == "pass"
+    assert next(check for check in report.checks if check.check_id == "black").status == "completed"
     assert next(check for check in report.checks if check.check_id == "silence").reason_code == (
         "no_audio"
     )
+    assert any(finding.code == "AUDIO_ABSENT" for finding in report.findings)
 
 
 def test_missing_input_is_controlled_incomplete(tmp_path: Path) -> None:
@@ -53,6 +52,48 @@ def test_missing_input_is_controlled_incomplete(tmp_path: Path) -> None:
     assert report.overall_status == "incomplete"
     assert report.media_metadata is None
     assert any(diagnostic.code == "input_unavailable" for diagnostic in report.diagnostics)
+
+
+def test_detector_failure_keeps_other_results_incomplete(tmp_path: Path) -> None:
+    media = tmp_path / "sample.mp4"
+    media.write_bytes(b"read-only-test-input")
+    payload = {
+        "format": {"format_name": "mov,mp4", "start_time": "0"},
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 320,
+                "height": 240,
+                "avg_frame_rate": "30/1",
+                "disposition": {"default": 1, "attached_pic": 0},
+            },
+            {"index": 1, "codec_type": "audio", "codec_name": "aac", "disposition": {"default": 1}},
+        ],
+    }
+
+    def runner(spec: object) -> ProcessResult:
+        argv = getattr(spec, "argv", [])
+        if any("blackdetect" in part for part in argv):
+            callback = getattr(spec, "event_callback", None)
+            if callback:
+                callback("[h264 @ 0x1] Error while decoding MB")
+            return ProcessResult(0, b"", b"")
+        return ProcessResult(0, json.dumps(payload).encode(), b"")
+
+    report = scan(
+        media,
+        ScanConfig(expect_width=100),
+        runner=runner,
+        tools=Toolchain(Path("ffmpeg"), Path("ffprobe"), ToolVersions()),
+    )
+    assert report.overall_status == "incomplete"
+    assert any(finding.code == "RESOLUTION_MISMATCH" for finding in report.findings)
+    assert next(check for check in report.checks if check.check_id == "black").status == "failed"
+    assert (
+        next(check for check in report.checks if check.check_id == "silence").status == "completed"
+    )
 
 
 def test_audio_only_probe_is_incomplete(tmp_path: Path) -> None:
