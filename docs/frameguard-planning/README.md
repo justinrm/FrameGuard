@@ -14,7 +14,7 @@ The original supplied specification remains the baseline. Where these drafts pro
 
 The selected folder was empty and had no project-local Git repository when these drafts were written. Read-only environment checks found Linux workspace Python 3.10.12, FFmpeg/FFprobe 4.4.2, and uv 0.12.13. This is not the user's macOS environment and does not establish compatibility with the proposed runtime. No product code existed in that planning session. The later local scan and its macOS FFmpeg 9.0.2 evidence live in the repository and in `docs/validation/`.
 
-Documented FFmpeg capabilities and current upstream source were researched. EOF/timestamp behavior still needs experiments on pinned release binaries. Moving upstream `master`/`main` links are reference evidence, not a reproducibility pin; Milestone 0 must record release/build identifiers and source revisions where relevant.
+Documented FFmpeg capabilities and current upstream source were researched. EOF and timestamp behavior on the pinned FFmpeg 9.0.2 build is recorded in [m0-observations.md](../validation/m0-observations.md). Moving upstream `master`/`main` links are reference evidence, not a reproducibility pin; Milestone 0 must record release/build identifiers and source revisions where relevant.
 
 ## Approval and next action
 
